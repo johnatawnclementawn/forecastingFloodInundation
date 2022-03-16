@@ -35,3 +35,10 @@ Data to collect:
 - Building footprints
 - Existing floodplain maps
 - Soil data - grain size / soil texture
+
+
+DEM analysis
+- slopes 
+- streams and tributaries
+- assigned weight based on stream order
+- distance accumulation from streams

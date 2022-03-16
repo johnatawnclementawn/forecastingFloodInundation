@@ -17,10 +17,16 @@ Your markdown or pdf report should contain the following:
 4.	One page showing 3 maps – The first shows true positives, true negatives, false negatives and false positives for the training set in Calgary. Second, your inundation predictions for Calgary (entire dataset); Third, predictions for your comparable city.
 
 Possible cities:
-- Pittsburgh
-- Cincinnati
-- St. Louis
-- 
+- [Pittsburgh](https://pittsburghpa.gov/open-data/index.html)
+- [Cincinnati](https://data.cincinnati-oh.gov/)
+- [St. Louis](https://www.stlouis-mo.gov/data/index.cfm)
+- Nashville
+- Memphis
 
 Data to collect:
-- 
+- Elevation (DEM)
+- Land Cover (impervious is more important)
+- Stream / River centerlines
+- Hydrology (width, depth, flow rate)
+- Building footprints
+- Existing floodplain maps

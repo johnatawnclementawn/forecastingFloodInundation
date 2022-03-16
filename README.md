@@ -16,6 +16,9 @@ Your markdown or pdf report should contain the following:
 3.	One page with your final logistic regression model summary including your ROC curve, confusion metrics and associated goodness of fit/cross-validation. Annotate briefly. 
 4.	One page showing 3 maps – The first shows true positives, true negatives, false negatives and false positives for the training set in Calgary. Second, your inundation predictions for Calgary (entire dataset); Third, predictions for your comparable city.
 
+Training & Validation City:
+[Calgary](https://data.calgary.ca/)
+
 Possible cities:
 - [Pittsburgh](https://pittsburghpa.gov/open-data/index.html)
 - [Cincinnati](https://data.cincinnati-oh.gov/)

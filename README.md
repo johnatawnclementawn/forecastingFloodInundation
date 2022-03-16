@@ -26,6 +26,7 @@ Possible cities:
 Data to collect:
 - Elevation (DEM)
 - Land Cover (impervious is more important)
+  - [National Land Cover Database](https://www.usgs.gov/centers/eros/science/national-land-cover-database)
 - Stream / River centerlines
 - Hydrology (width, depth, flow rate)
 - Building footprints

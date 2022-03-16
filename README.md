@@ -34,3 +34,4 @@ Data to collect:
 - Hydrology (width, depth, flow rate)
 - Building footprints
 - Existing floodplain maps
+- Soil data - grain size / soil texture

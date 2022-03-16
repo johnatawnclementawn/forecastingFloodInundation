@@ -16,7 +16,11 @@ Your markdown or pdf report should contain the following:
 3.	One page with your final logistic regression model summary including your ROC curve, confusion metrics and associated goodness of fit/cross-validation. Annotate briefly. 
 4.	One page showing 3 maps – The first shows true positives, true negatives, false negatives and false positives for the training set in Calgary. Second, your inundation predictions for Calgary (entire dataset); Third, predictions for your comparable city.
 
+Training & Validation City:
+[Calgary](https://data.calgary.ca/)
+
 Possible cities:
+- [Edmonton](https://data.edmonton.ca/)
 - [Pittsburgh](https://pittsburghpa.gov/open-data/index.html)
 - [Cincinnati](https://data.cincinnati-oh.gov/)
 - [St. Louis](https://www.stlouis-mo.gov/data/index.cfm)
@@ -26,7 +30,23 @@ Possible cities:
 Data to collect:
 - Elevation (DEM)
 - Land Cover (impervious is more important)
+  - [National Land Cover Database](https://www.usgs.gov/centers/eros/science/national-land-cover-database)
 - Stream / River centerlines
 - Hydrology (width, depth, flow rate)
 - Building footprints
 - Existing floodplain maps
+
+
+Data Sources:
+
+|City|Feature|DataType|Use|DataLink|
+|----|----|----|----|----|
+|Calgary|DEM|Raster||[Link](https://data.calgary.ca/Base-Maps/Digital-Elevation-Model-DEM-ASCII-2M/eink-tu9p)|
+|Calgary|Elevation|||[Link]()|
+|Calgary|Slope|||[Link]()|
+|Calgary|SteepSlopes||||
+|Calgary|Dist_SteepSlopes||||
+|Calgary|LandCover|Vector||[Link](https://data.calgary.ca/resource/as2i-6z3n.json)|
+|Calgary|CommercialZones||||
+|Calgary|ResidentialZones||||
+|Calgary|IndustrialZones||||

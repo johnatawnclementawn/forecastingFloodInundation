@@ -20,6 +20,7 @@ Training & Validation City:
 [Calgary](https://data.calgary.ca/)
 
 Possible cities:
+- [Edmonton](https://data.edmonton.ca/)
 - [Pittsburgh](https://pittsburghpa.gov/open-data/index.html)
 - [Cincinnati](https://data.cincinnati-oh.gov/)
 - [St. Louis](https://www.stlouis-mo.gov/data/index.cfm)
@@ -42,3 +43,16 @@ DEM analysis
 - streams and tributaries
 - assigned weight based on stream order
 - distance accumulation from streams
+
+Data Sources:
+|City|Feature|DataType|Use|DataLink|
+|----|----|----|----|----|
+|Calgary|DEM|Raster||[Link](https://data.calgary.ca/Base-Maps/Digital-Elevation-Model-DEM-ASCII-2M/eink-tu9p)|
+|Calgary|Elevation|||[Link]()|
+|Calgary|Slope|||[Link]()|
+|Calgary|SteepSlopes||||
+|Calgary|Dist_SteepSlopes||||
+|Calgary|LandCover|Vector||[Link](https://data.calgary.ca/resource/as2i-6z3n.json)|
+|Calgary|CommercialZones||||
+|Calgary|ResidentialZones||||
+|Calgary|IndustrialZones||||

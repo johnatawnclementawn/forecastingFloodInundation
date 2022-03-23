@@ -35,10 +35,16 @@ Data to collect:
 - Hydrology (width, depth, flow rate)
 - Building footprints
 - Existing floodplain maps
+- Soil data - grain size / soil texture
 
+
+DEM analysis
+- slopes 
+- streams and tributaries
+- assigned weight based on stream order
+- distance accumulation from streams
 
 Data Sources:
-
 |City|Feature|DataType|Use|DataLink|
 |----|----|----|----|----|
 |Calgary|DEM|Raster||[Link](https://data.calgary.ca/Base-Maps/Digital-Elevation-Model-DEM-ASCII-2M/eink-tu9p)|

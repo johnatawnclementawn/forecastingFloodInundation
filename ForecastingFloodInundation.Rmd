@@ -21,6 +21,7 @@ library(knitr)
 library(kableExtra)
 library(tigris)
 library(viridis)
+library(raster)
 ```
 
 ```{r mapTheme, echo=TRUE}
@@ -56,5 +57,34 @@ plotTheme <- theme(
   # Format the grid
   panel.grid.major=element_line(colour="#D0D0D0",size=.75),
   axis.ticks=element_blank())
+```
+
+## Data
+
+### Calgary Data
+```{r}
+calgaryBoundary <- st_read('https://data.calgary.ca/resource/erra-cqp9.geojson') %>%
+  st_transform(crs = 3400)
+```
+
+
+### Edmonton Data
+```{r}
+edmontonBoundary <- st_read('https://data.edmonton.ca/resource/qqvh-dp5m.geojson') %>%
+  st_transform(crs = 3400)
+```
+## Analysis
+
+### Create Fishnet
+```{r}
+cal_fishnet <- st_make_grid(calgaryBoundary, cellsize = 500) %>%
+  st_sf() %>%
+  mutate(uniqueID = rownames(.))
+
+ed_fishnet <- st_make_grid(calgaryBoundary, cellsize = 500) %>%
+  st_sf() %>%
+  mutate(uniqueID = rownames(.))
+
+mapview::mapview(cal_fishnet)
 ```
 

@@ -19,3 +19,6 @@ https://data.calgary.ca/Environment/Impervious-Surface-2018/i9mt-qafb
 
 COMPOSITE - DON'T USE City-wide landcover API https://data.calgary.ca/resource/as2i-6z3n.json
 https://data.calgary.ca/Environment/Citywide-Land-Cover/as2i-6z3n
+
+
+Canada DEM data https://maps.canada.ca/czs/index-en.html

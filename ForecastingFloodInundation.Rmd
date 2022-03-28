@@ -81,25 +81,29 @@ calgaryBoundary <- st_read('https://data.calgary.ca/resource/erra-cqp9.geojson')
 pghBoundary <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/PittsburghData/producedData/PGHCityBoundary_expanded.shp')
 ```
 
-```{r createFishnet, eval=FALSE, include=FALSE}
+```{r createFishnet}
 ### Create Fishnet
-cal_fishnet <- st_make_grid(calgaryBoundary, cellsize = 500, square = TRUE) %>%
-  .[calgaryBoundary] %>% # Clips to original boundary 
-  st_sf() %>%
-  mutate(uniqueID = rownames(.))
+# cal_fishnet <- st_make_grid(calgaryBoundary, cellsize = 500, square = TRUE) %>%
+#   .[calgaryBoundary] %>% # Clips to original boundary 
+#   st_sf() %>%
+#   mutate(uniqueID = rownames(.))
 
 
-pgh_fishnet <- st_make_grid(pghBoundary, cellsize = 500, square = TRUE) %>%
-  .[pghBoundary] %>% # Clips to original boundary 
-  st_sf() %>%
-  mutate(uniqueID = rownames(.))
+# pgh_fishnet <- st_make_grid(pghBoundary, cellsize = 500, square = TRUE) %>%
+#   .[pghBoundary] %>% # Clips to original boundary 
+#   st_sf() %>%
+#   mutate(uniqueID = rownames(.))
 
 # st_write(cal_fishnet, 'D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/CalgaryData/fishnet/cal_fishnet.shp')
 # 
 # st_write(pgh_fishnet, 'D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/PittsburghData/producedData/pgh_fishnet.shp')
+
+cal_fishnet <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/CalgaryData/fishnet/cal_fishnet.shp')
+
+pgh_fishnet <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/PittsburghData/producedData/pgh_fishnet.shp')
 ```
 
-```{r eval=FALSE, fig.height=12, fig.width=24, include=FALSE}
+```{r fig.height=12, fig.width=24}
 calFish <- ggplot() +
   geom_sf(data = cal_fishnet) +
   geom_sf(data = calgaryBoundary, 

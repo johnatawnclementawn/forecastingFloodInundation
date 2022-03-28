@@ -8,9 +8,16 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+## Introduction & Motivation
+On average, flooding results in approximately 120 fatalities and about $5 billion in property damages across the United States on an annual basis [1][2]. It is advantageous, then, to be able to predict future flooding such that it may be mitigated. This is especially common in cities, which contain large areas of impermeable surfaces and concentrate human growth. Mitigation measures include:
+1. Replace impermeable surfaces
+1. Install water attenuation and infiltration devices
+1. Improve storm water and waste water management systems
+1. **Improve warning mechanisms**
+We will focus on the last of these items: **improving warning mechanisms**. To do this, we have built a machine learning model which uses terrain, distance to existing water, and to predict prior flooding in Calgary, CA. We evaluated the effectiveness of the model by testing it on data held out from the model building process. Finally, we used the model to predict flooding in Pittsburgh, PA, USA.
 
 
-```{r libraries, warning = FALSE, message = FALSE}
+```{r libraries, message=FALSE, warning=FALSE}
 library(caret)
 library(pscl)
 library(plotROC)
@@ -19,6 +26,7 @@ library(sf)
 library(tidyverse)
 library(knitr)
 library(kableExtra)
+library(gridExtra)
 library(tigris)
 library(viridis)
 library(raster)
@@ -59,32 +67,88 @@ plotTheme <- theme(
   axis.ticks=element_blank())
 ```
 
-## Data
+## Model Components: Data
 
 ### Calgary Data
 ```{r}
 calgaryBoundary <- st_read('https://data.calgary.ca/resource/erra-cqp9.geojson') %>%
-  st_transform(crs = 3400)
+  st_transform(crs = 3776)
 ```
 
 
-### Edmonton Data
+### Pittsburgh data
 ```{r}
-edmontonBoundary <- st_read('https://data.edmonton.ca/resource/qqvh-dp5m.geojson') %>%
-  st_transform(crs = 3400)
+pghBoundary <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/PittsburghData/producedData/PGHCityBoundary_expanded.shp')
 ```
-## Analysis
 
+```{r createFishnet, eval=FALSE, include=FALSE}
 ### Create Fishnet
-```{r}
-cal_fishnet <- st_make_grid(calgaryBoundary, cellsize = 500) %>%
+cal_fishnet <- st_make_grid(calgaryBoundary, cellsize = 500, square = TRUE) %>%
+  .[calgaryBoundary] %>% # Clips to original boundary 
   st_sf() %>%
   mutate(uniqueID = rownames(.))
 
-ed_fishnet <- st_make_grid(calgaryBoundary, cellsize = 500) %>%
+
+pgh_fishnet <- st_make_grid(pghBoundary, cellsize = 500, square = TRUE) %>%
+  .[pghBoundary] %>% # Clips to original boundary 
   st_sf() %>%
   mutate(uniqueID = rownames(.))
 
-mapview::mapview(cal_fishnet)
+# st_write(cal_fishnet, 'D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/CalgaryData/fishnet/cal_fishnet.shp')
+# 
+# st_write(pgh_fishnet, 'D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/PittsburghData/producedData/pgh_fishnet.shp')
 ```
 
+```{r eval=FALSE, fig.height=12, fig.width=24, include=FALSE}
+calFish <- ggplot() +
+  geom_sf(data = cal_fishnet) +
+  geom_sf(data = calgaryBoundary, 
+          color = "red", fill = "transparent") +
+  mapTheme
+
+pghFish <- ggplot() +
+  geom_sf(data = pgh_fishnet) +
+  geom_sf(data = pghBoundary, 
+          color = "red", fill = "transparent") +
+  mapTheme
+
+grid.arrange(calFish, pghFish, nrow = 1)
+```
+
+```{r}
+pgh_PredictionFishnet <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/PittsburghData/pgh_ToPredict_FC.shp')
+
+# Clean up colnames:
+pgh_PredictionFishnet <- pgh_PredictionFishnet %>%
+  rename(uniqueID = pgh_fishne,
+         CellAvgDistStream = pgh_avgD_5,
+         CellAvgDistSteepSlope =pgh_avg_11,
+         CellSumImpSurf = pgh_sumI_5)
+```
+
+### Wrangle Prediction Set
+```{r}
+predData <- pgh_PredictionFishnet %>%
+  dplyr::select(uniqueID, CellAvgDistStream, CellAvgDistSteepSlope, CellSumImpSurf) %>%
+  st_drop_geometry()
+```
+
+
+## Model Components: Build Model
+
+```{r}
+set.seed(4326)
+trainIdx <- createDataPartition(predData$CellAvgDistSteepSlope, p=.7,
+                                list=FALSE,
+                                times=1)
+Train <- predData[trainIdx,]
+test <- predData[-trainIdx,]
+```
+
+```{r}
+#floodModel <- glm(CellAvgDistSteepSlope ~ ., family = "")
+```
+
+#### Citations
+1.Federal Emergency Management Agency. Flood Impact Fact Sheet. https://community.fema.gov/ProtectiveActions/s/article/Flood-Impact.   
+2. United States, Department of Commerce, National Oceanic and Atmospheric Administration, National Severe Storms Laboratory, “Severe Weather 101: Frequently Asked Questions About Floods,” accessed December 11, 2014, https://www.nssl.noaa.gov/education/svrwx101/floods/faq/. 

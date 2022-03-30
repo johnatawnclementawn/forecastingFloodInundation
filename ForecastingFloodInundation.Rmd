@@ -1,7 +1,7 @@
 ---
 title: "Forecasting Flood Inundation"
 author: "Johnathan Clementi & Itay Porat"
-date: "3/16/2022"
+date: "3/30/2022"
 output: 
   html_document:
     toc: true
@@ -12,7 +12,13 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+	echo = TRUE,
+	error = TRUE,
+	message = FALSE,
+	warning = FALSE,
+	cache = TRUE
+)
 ```
 ## Introduction & Motivation
 On average, flooding results in approximately 120 fatalities and about $5 billion in property damages across the United States on an annual basis [1][2]. It is advantageous, then, to be able to predict future flooding such that it may be mitigated. This is especially common in cities, which contain large areas of impermeable surfaces and concentrate human growth. Mitigation measures include:
@@ -73,7 +79,10 @@ plotTheme <- function() {
                     # Format the grid
                     panel.grid.major=element_line(colour="#D0D0D0",size=.75),
                     axis.ticks=element_blank())
-              }
+}
+
+options(scipen =  "sf")
+options(scipen = 999)
 ```
 
 ## Model Components: Data
@@ -274,7 +283,7 @@ cal_inundationProbs <- predict(floodModel, test, type="response")
 hist(cal_inundationProbs)
 ```
 
-```{r plot_preds}
+```{r test_plot_preds}
 testProbs <- data.frame(obs = as.numeric(test$inundation),
                         pred = cal_inundationProbs)
 
@@ -290,7 +299,7 @@ ggplot(testProbs, aes(x = pred, fill=as.factor(obs))) +
 ```
 
 
-```{r confusion_matrix, message = FALSE, warning = FALSE}
+```{r test_confusion_matrix, message = FALSE, warning = FALSE}
 testProbs$predClass  = ifelse(testProbs$pred > .28, 1, 0)
 
 caret::confusionMatrix(reference = as.factor(testProbs$obs), 
@@ -299,7 +308,7 @@ caret::confusionMatrix(reference = as.factor(testProbs$obs),
 
 ```
 
-```{r roc_curve, message = FALSE, warning = FALSE}
+```{r test_roc_curve, message = FALSE, warning = FALSE}
 ggplot(testProbs, aes(d = obs, m = pred)) + 
   geom_roc(n.cuts = 50, labels = FALSE) + 
   style_roc(theme = theme_grey) +

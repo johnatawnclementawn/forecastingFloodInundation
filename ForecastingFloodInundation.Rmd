@@ -187,32 +187,53 @@ cal_PredictionFishnet %>%
 
 ```
 
-
-### Wrangle Prediction Set
-```{r}
-predData <- cal_PredictionFishnet %>%
-  dplyr::select(inundation, CellAvgDistStream, CellAvgDistSteepSlope, CellAvgDistWetland, CellSumImpSurf) %>%
-  st_drop_geometry()
-```
-
-
 ## Model Components: Build Model
 
 ```{r}
 set.seed(4326)
-trainIdx <- createDataPartition(predData$CellAvgDistSteepSlope, p=.7,
+trainIdx <- createDataPartition(cal_PredictionFishnet$CellAvgDistSteepSlope, p=.7,
                                 list=FALSE,
                                 times=1)
-Train <- predData[trainIdx,]
-test <- predData[-trainIdx,]
+Train <- cal_PredictionFishnet[trainIdx,]
+test <- cal_PredictionFishnet[-trainIdx,]
 ```
 
 ```{r}
-floodModel <- glm(inundation ~ ., family="binomial"(link="logit"),
-                  data = Train %>% as.data.frame())
+floodModel <- glm(inundation ~ ., 
+                  family="binomial"(link="logit"),
+                  data = Train %>% dplyr::select(-uniqueID) %>%
+                    st_drop_geometry())
 
 summary(floodModel)
 ```
+
+```{r}
+cal_Train_inundationProbs <- predict(floodModel, Train, type="response")
+
+hist(cal_Train_inundationProbs)
+```
+
+```{r plot_preds}
+trainProbs <- data.frame(obs = as.numeric(Train$inundation),
+                        pred = cal_Train_inundationProbs)
+
+ggplot(trainProbs, aes(x = pred, fill=as.factor(obs))) + 
+  geom_density() +
+  facet_grid(obs ~ .) + 
+  xlab("Probability") + 
+  geom_vline(xintercept = .32) +
+  scale_fill_manual(values = c("dark green", "dark blue"),
+                      labels = c("No Inundation","Inundation"),
+                      name = "") +
+  plotTheme()
+
+trainProbs$predClass  = ifelse(trainProbs$pred > .32, 1, 0)
+
+caret::confusionMatrix(reference = as.factor(trainProbs$obs), 
+                       data = as.factor(trainProbs$predClass), 
+                       positive = "1")
+```
+
 
 ```{r}
 cal_inundationProbs <- predict(floodModel, test, type="response")
@@ -228,7 +249,7 @@ ggplot(testProbs, aes(x = pred, fill=as.factor(obs))) +
   geom_density() +
   facet_grid(obs ~ .) + 
   xlab("Probability") + 
-  geom_vline(xintercept = .32) +
+  geom_vline(xintercept = .28) +
   scale_fill_manual(values = c("dark green", "dark blue"),
                       labels = c("No Inundation","Inundation"),
                       name = "") +
@@ -237,7 +258,7 @@ ggplot(testProbs, aes(x = pred, fill=as.factor(obs))) +
 
 
 ```{r confusion_matrix, message = FALSE, warning = FALSE}
-testProbs$predClass  = ifelse(testProbs$pred > .32 ,1,0)
+testProbs$predClass  = ifelse(testProbs$pred > .28, 1, 0)
 
 caret::confusionMatrix(reference = as.factor(testProbs$obs), 
                        data = as.factor(testProbs$predClass), 
@@ -247,13 +268,13 @@ caret::confusionMatrix(reference = as.factor(testProbs$obs),
 
 ```{r roc_curve, message = FALSE, warning = FALSE}
 
-ggplot(testProbs, aes(d = obs, m = pred)) + 
+ggplot(trainProbs, aes(d = obs, m = pred)) + 
   geom_roc(n.cuts = 50, labels = FALSE) + 
   style_roc(theme = theme_grey) +
   geom_abline(slope = 1, intercept = 0, size = 1.5, color = 'grey') +
   plotTheme()
 
-auc(testProbs$obs, testProbs$pred)
+auc(trainProbs$obs, trainProbs$pred)
 ```
 
 # Testing on a comparable city
@@ -274,16 +295,16 @@ pgh_PredictionFishnet <- pgh_PredictionFishnet %>%
          CellAvgDistWetland = pgh_avg_17)
 
 pgh_PredictionFishnet <- pgh_PredictionFishnet %>%
-  dplyr::select(CellAvgDistStream, CellAvgDistSteepSlope, CellAvgDistWetland, CellSumImpSurf)
+  dplyr::select(uniqueID, CellAvgDistStream, CellAvgDistSteepSlope, CellAvgDistWetland, CellSumImpSurf)
 ```
 
 ```{r}
-pgh_inundationProbs <- predict(floodModel, test, type="response")
+pgh_inundationProbs <- predict(floodModel, pgh_PredictionFishnet, type="response")
 
 hist(pgh_inundationProbs)
 
 pgh_inundationProbs <- data.frame(pgh_inundationProbs)
-pgh_inundationProbs$predClass  = ifelse(pgh_inundationProbs$pgh_inundationProbs > .32 ,1,0)
+pgh_inundationProbs$predClass  = ifelse(pgh_inundationProbs$pgh_inundationProbs > .28 ,1,0)
 ```
 
 #### Citations

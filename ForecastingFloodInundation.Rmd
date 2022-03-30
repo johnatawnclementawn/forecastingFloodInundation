@@ -2,7 +2,13 @@
 title: "Forecasting Flood Inundation"
 author: "Johnathan Clementi & Itay Porat"
 date: "3/16/2022"
-output: html_document
+output: 
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
@@ -327,7 +333,7 @@ cal_FullPredictions %>%
     scale_fill_manual(values = c("dark green", "dark blue"),
                       labels = c("No Inundation","Inundation"),
                       name = "Predicted Inundation") +
-    labs(title = "Historic Flood Inundation in Calgary, Alberta, CA") +
+    labs(title = "Predicted Flood Inundation Regions in Calgary, Alberta, CA") +
     mapTheme()
 ```
 
@@ -355,14 +361,70 @@ pgh_PredictionFishnet <- pgh_PredictionFishnet %>%
   dplyr::select(uniqueID, CellAvgDistStream, CellAvgDistSteepSlope, CellAvgDistWetland, CellSumImpSurf)
 ```
 
-```{r}
-pgh_inundationProbs <- predict(floodModel, pgh_PredictionFishnet, type="response")
+```{r fig.width=10, fig.height=10}
+# Average Distance to stream or river features as created from a DEM
+pgh_PredictionFishnet %>%
+  ggplot() +
+    geom_sf(aes(fill = CellAvgDistStream)) +
+    scale_fill_viridis(direction = -1) +
+    labs(title = "Average Distance to Streams or Rivers") +
+    mapTheme()
 
-hist(pgh_inundationProbs)
+# Average Distance to steep slopes as created from a DEM
+# A steep slope is defined as a rise of 20% or more
+pgh_PredictionFishnet %>%
+  ggplot() +
+    geom_sf(aes(fill = CellAvgDistSteepSlope)) +
+    scale_fill_viridis(direction = -1) +
+    labs(title = "Average Distance to Steep Slopes (>20% rise)") +
+    mapTheme()
 
-pgh_inundationProbs <- data.frame(pgh_inundationProbs)
-pgh_inundationProbs$predClass  = ifelse(pgh_inundationProbs$pgh_inundationProbs > .28 ,1,0)
+# Average Distance to wetlands as retrieved from open data sources:
+# Alberta / Calgary: https://geospatial.alberta.ca/titan/rest/services/environment/alberta_merged_wetland_inventory/MapServer/3
+# Allegheny County / Pittsburgh: https://www.pasda.psu.edu/download/alleghenycounty/AlleghenyCounty_NWI2000.zip
+pgh_PredictionFishnet %>%
+  ggplot() +
+    geom_sf(aes(fill = CellAvgDistWetland)) +
+    scale_fill_viridis(direction = -1) +
+    labs(title = "Average Distance to Wetlands") +
+    mapTheme()
+
+# Summary of Impervious Surfaces
+# If a cell touches an impervious surface, it will be classified as having impervious surfaces
+# Land cover data: http://www.cec.org/north-american-environmental-atlas/land-cover-30m-2015-landsat-and-rapideye/
+pgh_PredictionFishnet %>%
+  ggplot() +
+    geom_sf(aes(fill = CellSumImpSurf)) +
+    scale_fill_viridis(direction = -1) +
+    labs(title = "Summary of Impervious Surfaces") +
+    mapTheme()
+
 ```
+
+
+```{r}
+pgh_PredictionFishnet$inundationProbs <- predict(floodModel, pgh_PredictionFishnet, type="response")
+
+hist(pgh_PredictionFishnet$inundationProbs)
+
+pgh_PredictionFishnet$predClass = ifelse(pgh_inundationProbs$pgh_inundationProbs > .28 ,1,0)
+
+
+```
+
+```{r}
+pgh_PredictionFishnet %>%
+  mutate(predClass = as.factor(predClass)) %>%
+  ggplot() +
+    geom_sf(aes(fill = predClass)) +
+    scale_fill_manual(values = c("dark green", "dark blue"),
+                      labels = c("No Inundation","Inundation"),
+                      name = "Predicted Inundation") +
+    labs(title = "Predicted Flood Inundation Regions in Calgary, Alberta, CA") +
+    mapTheme()
+```
+
+
 
 #### Citations
 1.Federal Emergency Management Agency. Flood Impact Fact Sheet. https://community.fema.gov/ProtectiveActions/s/article/Flood-Impact.   

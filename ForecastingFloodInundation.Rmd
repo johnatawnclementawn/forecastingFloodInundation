@@ -37,12 +37,12 @@ mapTheme <- function() {
             theme(plot.title =element_text(size=12),
                   plot.subtitle = element_text(size=8),
                   plot.caption = element_text(size = 6),
-                  axis.line=element_blank(),
-                  axis.text.x=element_blank(),
-                  axis.text.y=element_blank(),
-                  axis.ticks=element_blank(),
-                  axis.title.x=element_blank(),
-                  axis.title.y=element_blank(),
+                  # axis.line=element_blank(),
+                  # axis.text.x=element_blank(),
+                  # axis.text.y=element_blank(),
+                  # axis.ticks=element_blank(),
+                  # axis.title.x=element_blank(),
+                  # axis.title.y=element_blank(),
                   panel.background=element_blank(),
                   panel.border=element_blank(),
                   panel.grid.major=element_line(colour = 'transparent'),
@@ -53,7 +53,7 @@ mapTheme <- function() {
                   legend.key.height = unit(1, "cm"), legend.key.width = unit(0.2, "cm"))
             }
 
-plotTheme() <- function() { 
+plotTheme <- function() { 
               theme(plot.title =element_text(size=12),
                     plot.subtitle = element_text(size=8),
                     plot.caption = element_text(size = 6),
@@ -78,13 +78,7 @@ calgaryBoundary <- st_read('https://data.calgary.ca/resource/erra-cqp9.geojson')
   st_transform(crs = 3776)
 ```
 
-
-### Pittsburgh data
-```{r}
-pghBoundary <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/PittsburghData/producedData/PGHCityBoundary_expanded.shp')
-```
-
-```{r createFishnet}
+```{r createFishnet, eval=FALSE, include=FALSE}
 ### Create Fishnet
 # cal_fishnet <- st_make_grid(calgaryBoundary, cellsize = 500, square = TRUE) %>%
 #   .[calgaryBoundary] %>% # Clips to original boundary
@@ -106,7 +100,7 @@ cal_fishnet <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Sp
 pgh_fishnet <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/PittsburghData/producedData/pgh_fishnet.shp')
 ```
 
-```{r fig.height=12, fig.width=24}
+```{r eval=FALSE, fig.height=12, fig.width=24, include=FALSE}
 calFish <- ggplot() +
   geom_sf(data = cal_fishnet) +
   geom_sf(data = calgaryBoundary, 
@@ -132,15 +126,23 @@ cal_PredictionFishnet <- cal_PredictionFishnet %>%
          CellAvgDistSteepSlope = calFish_11,
          CellAvgDistWetland = calFish__5,
          CellSumImpSurf = calFish_22,
-         inundation = calFish_27)
+         inundation = calFish_27) %>%
+  dplyr::select(uniqueID, inundation, CellAvgDistStream, CellAvgDistSteepSlope, CellAvgDistWetland, CellSumImpSurf)
 
 # Make uniqueID numeric
 cal_PredictionFishnet$uniqueID <- as.numeric(cal_PredictionFishnet$uniqueID)
 ```
 
 #### Dependent Variable Visualization
-```{r}
-
+```{r fig.width=10, fig.height=10}
+cal_PredictionFishnet %>%
+  mutate(inundation = as.factor(inundation)) %>%
+  ggplot() +
+    geom_sf(aes(fill = inundation)) +
+    scale_fill_manual(values = c("dark green", "dark blue"),
+                        labels = c("No Inundation","Inundation")) +
+    labs(title = "Historic Flood Inundation in Calgary, Alberta, CA") +
+    mapTheme()
 ```
 
 
@@ -197,6 +199,7 @@ ggplot(testProbs, aes(x = pred, fill=as.factor(obs))) +
   plotTheme()
 ```
 
+
 ```{r confusion_matrix, message = FALSE, warning = FALSE}
 testProbs$predClass  = ifelse(testProbs$pred > .32 ,1,0)
 
@@ -218,6 +221,11 @@ auc(testProbs$obs, testProbs$pred)
 ```
 
 # Testing on a comparable city
+### Pittsburgh data
+```{r}
+pghBoundary <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/PittsburghData/producedData/PGHCityBoundary_expanded.shp')
+```
+
 ```{r}
 pgh_PredictionFishnet <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/PittsData/pgh_toPredict')
 

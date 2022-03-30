@@ -84,7 +84,7 @@ pghBoundary <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Sp
 ```{r createFishnet}
 ### Create Fishnet
 # cal_fishnet <- st_make_grid(calgaryBoundary, cellsize = 500, square = TRUE) %>%
-#   .[calgaryBoundary] %>% # Clips to original boundary 
+#   .[calgaryBoundary] %>% # Clips to original boundary
 #   st_sf() %>%
 #   mutate(uniqueID = rownames(.))
 
@@ -95,7 +95,7 @@ pghBoundary <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Sp
 #   mutate(uniqueID = rownames(.))
 
 # st_write(cal_fishnet, 'D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/CalgaryData/fishnet/cal_fishnet.shp')
-# 
+
 # st_write(pgh_fishnet, 'D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/PittsburghData/producedData/pgh_fishnet.shp')
 
 cal_fishnet <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/CalgaryData/fishnet/cal_fishnet.shp')
@@ -120,6 +120,23 @@ grid.arrange(calFish, pghFish, nrow = 1)
 ```
 
 ```{r}
+cal_PredictionFishnet <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/CalgaryData/cal_toPredict.shp')
+
+# Clean up colnames:
+cal_PredictionFishnet <- cal_PredictionFishnet %>%
+  rename(uniqueID = cal_fishne,
+         CellAvgDistStream = calFish_17,
+         CellAvgDistSteepSlope = calFish_11,
+         CellAvgDistWetland = calFish__5,
+         CellSumImpSurf = calFish_22,
+         inundation = calFish_27)
+
+# Make uniqueID numeric
+cal_PredictionFishnet$uniqueID <- as.numeric(cal_PredictionFishnet$uniqueID)
+```
+
+
+```{r}
 pgh_PredictionFishnet <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/PittsburghData/pgh_ToPredict_FC.shp')
 
 # Clean up colnames:
@@ -128,12 +145,13 @@ pgh_PredictionFishnet <- pgh_PredictionFishnet %>%
          CellAvgDistStream = pgh_avgD_5,
          CellAvgDistSteepSlope =pgh_avg_11,
          CellSumImpSurf = pgh_sumI_5)
+         
 ```
 
 ### Wrangle Prediction Set
 ```{r}
-predData <- pgh_PredictionFishnet %>%
-  dplyr::select(uniqueID, CellAvgDistStream, CellAvgDistSteepSlope, CellSumImpSurf) %>%
+predData <- cal_PredictionFishnet %>%
+  dplyr::select(inundation, CellAvgDistStream, CellAvgDistSteepSlope, CellAvgDistWetland, CellSumImpSurf, ) %>%
   st_drop_geometry()
 ```
 
@@ -150,7 +168,51 @@ test <- predData[-trainIdx,]
 ```
 
 ```{r}
-#floodModel <- glm(CellAvgDistSteepSlope ~ ., family = "")
+floodModel <- glm(inundation ~ ., family="binomial"(link="logit"),
+                  data = Train %>% as.data.frame())
+
+summary(floodModel)
+```
+
+```{r}
+inundationProbs <- predict(floodModel, test, type="response")
+
+hist(inundationProbs)
+```
+
+```{r plot_preds}
+testProbs <- data.frame(obs = as.numeric(test$inundation),
+                        pred = inundationProbs)
+
+ggplot(testProbs, aes(x = pred, fill=as.factor(obs))) + 
+  geom_density() +
+  facet_grid(obs ~ .) + 
+  xlab("Probability") + 
+  geom_vline(xintercept = .32) +
+  scale_fill_manual(values = c("dark green", "dark blue"),
+                      labels = c("No Inundation","Inundation"),
+                      name = "") +
+  plotTheme
+```
+
+```{r confusion_matrix, message = FALSE, warning = FALSE}
+testProbs$predClass  = ifelse(testProbs$pred > .32 ,1,0)
+
+caret::confusionMatrix(reference = as.factor(testProbs$obs), 
+                       data = as.factor(testProbs$predClass), 
+                       positive = "1")
+
+```
+
+```{r roc_curve, message = FALSE, warning = FALSE}
+
+ggplot(testProbs, aes(d = obs, m = pred)) + 
+  geom_roc(n.cuts = 50, labels = FALSE) + 
+  style_roc(theme = theme_grey) +
+  geom_abline(slope = 1, intercept = 0, size = 1.5, color = 'grey') +
+  plotTheme
+
+auc(testProbs$obs, testProbs$pred)
 ```
 
 #### Citations

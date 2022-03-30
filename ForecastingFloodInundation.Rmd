@@ -136,22 +136,10 @@ cal_PredictionFishnet$uniqueID <- as.numeric(cal_PredictionFishnet$uniqueID)
 ```
 
 
-```{r}
-pgh_PredictionFishnet <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/PittsburghData/pgh_ToPredict_FC.shp')
-
-# Clean up colnames:
-pgh_PredictionFishnet <- pgh_PredictionFishnet %>%
-  rename(uniqueID = pgh_fishne,
-         CellAvgDistStream = pgh_avgD_5,
-         CellAvgDistSteepSlope =pgh_avg_11,
-         CellSumImpSurf = pgh_sumI_5)
-         
-```
-
 ### Wrangle Prediction Set
 ```{r}
 predData <- cal_PredictionFishnet %>%
-  dplyr::select(inundation, CellAvgDistStream, CellAvgDistSteepSlope, CellAvgDistWetland, CellSumImpSurf, ) %>%
+  dplyr::select(inundation, CellAvgDistStream, CellAvgDistSteepSlope, CellAvgDistWetland, CellSumImpSurf) %>%
   st_drop_geometry()
 ```
 
@@ -175,14 +163,14 @@ summary(floodModel)
 ```
 
 ```{r}
-inundationProbs <- predict(floodModel, test, type="response")
+cal_inundationProbs <- predict(floodModel, test, type="response")
 
-hist(inundationProbs)
+hist(cal_inundationProbs)
 ```
 
 ```{r plot_preds}
 testProbs <- data.frame(obs = as.numeric(test$inundation),
-                        pred = inundationProbs)
+                        pred = cal_inundationProbs)
 
 ggplot(testProbs, aes(x = pred, fill=as.factor(obs))) + 
   geom_density() +
@@ -213,6 +201,28 @@ ggplot(testProbs, aes(d = obs, m = pred)) +
   plotTheme
 
 auc(testProbs$obs, testProbs$pred)
+```
+
+# Testing on a comparable city
+```{r}
+pgh_PredictionFishnet <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/PittsData/pgh_toPredict')
+
+# Clean up colnames:
+pgh_PredictionFishnet <- pgh_PredictionFishnet %>%
+  rename(uniqueID = pgh_fishne,
+         CellAvgDistStream = pgh_avgD_5,
+         CellAvgDistSteepSlope =pgh_avg_11,
+         CellSumImpSurf = pgh_sumI_5,
+         CellAvgDistWetland = pgh_avg_17)
+
+pgh_PredictionFishnet <- pgh_PredictionFishnet %>%
+  dplyr::select(CellAvgDistStream, CellAvgDistSteepSlope, CellAvgDistWetland, CellSumImpSurf)
+```
+
+```{r}
+pgh_inundationProbs <- predict(floodModel, test, type="response")
+
+hist(pgh_inundationProbs)
 ```
 
 #### Citations

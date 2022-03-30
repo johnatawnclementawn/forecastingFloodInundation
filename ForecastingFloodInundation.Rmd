@@ -416,8 +416,8 @@ pgh_PredictionFishnet$inundationProbs <- predict(floodModel, pgh_PredictionFishn
 
 hist(pgh_PredictionFishnet$inundationProbs)
 
-pgh_PredictionFishnet$predClass = ifelse(pgh_inundationProbs$pgh_inundationProbs > .28 ,1,0)
-
+pgh_PredictionFishnet <- pgh_PredictionFishnet %>%
+  mutate(predClass = ifelse(inundationProbs > .28 ,1,0))
 
 ```
 

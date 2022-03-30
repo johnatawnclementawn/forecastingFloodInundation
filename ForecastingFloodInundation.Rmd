@@ -147,7 +147,43 @@ cal_PredictionFishnet %>%
 
 
 #### Indpendent Variable Visualizations
-```{r}
+```{r fig.width=10, fig.height=10}
+# Average Distance to stream or river features as created from a DEM
+cal_PredictionFishnet %>%
+  ggplot() +
+    geom_sf(aes(fill = CellAvgDistStream)) +
+    scale_fill_viridis(direction = -1) +
+    labs(title = "Average Distance to Streams or Rivers") +
+    mapTheme()
+
+# Average Distance to steep slopes as created from a DEM
+# A steep slope is defined as a rise of 20% or more
+cal_PredictionFishnet %>%
+  ggplot() +
+    geom_sf(aes(fill = CellAvgDistSteepSlope)) +
+    scale_fill_viridis(direction = -1) +
+    labs(title = "Average Distance to Steep Slopes (>20% rise)") +
+    mapTheme()
+
+# Average Distance to wetlands as retrieved from open data sources:
+# Alberta / Calgary: https://geospatial.alberta.ca/titan/rest/services/environment/alberta_merged_wetland_inventory/MapServer/3
+# Allegheny County / Pittsburgh: https://www.pasda.psu.edu/download/alleghenycounty/AlleghenyCounty_NWI2000.zip
+cal_PredictionFishnet %>%
+  ggplot() +
+    geom_sf(aes(fill = CellAvgDistWetland)) +
+    scale_fill_viridis(direction = -1) +
+    labs(title = "Average Distance to Wetlands") +
+    mapTheme()
+
+# Summary of Impervious Surfaces
+# If a cell touches an impervious surface, it will be classified as having impervious surfaces
+# Land cover data: http://www.cec.org/north-american-environmental-atlas/land-cover-30m-2015-landsat-and-rapideye/
+cal_PredictionFishnet %>%
+  ggplot() +
+    geom_sf(aes(fill = CellSumImpSurf)) +
+    scale_fill_viridis(direction = -1) +
+    labs(title = "Summary of Impervious Surfaces") +
+    mapTheme()
 
 ```
 

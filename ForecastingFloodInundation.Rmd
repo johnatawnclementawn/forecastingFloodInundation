@@ -234,6 +234,33 @@ caret::confusionMatrix(reference = as.factor(trainProbs$obs),
                        positive = "1")
 ```
 
+```{r roc_curve, message = FALSE, warning = FALSE}
+ggplot(trainProbs, aes(d = obs, m = pred)) + 
+  geom_roc(n.cuts = 50, labels = FALSE) + 
+  style_roc(theme = theme_grey) +
+  geom_abline(slope = 1, intercept = 0, size = 1.5, color = 'grey') +
+  plotTheme()
+
+auc(trainProbs$obs, trainProbs$pred)
+```
+
+
+```{r fig.width=10,fig.height=10}
+train_cm_map_df <- cbind(Train, trainProbs) %>%
+  mutate(confusionMtx = case_when(predClass == 1 & obs == 1 ~ "True Positive",
+                                  predClass == 1 & obs == 0 ~ "False Positive",
+                                  predClass == 0 & obs == 0 ~ "True Negative",
+                                  predClass == 0 & obs == 1 ~ "False Negative"))
+
+train_cm_map_df %>%
+  ggplot() +
+    geom_sf(aes(fill = confusionMtx)) +
+    scale_fill_viridis(direction = -1, discrete = TRUE) +
+    labs(title = "Model training accuracy") +
+    mapTheme()
+
+```
+
 
 ```{r}
 cal_inundationProbs <- predict(floodModel, test, type="response")
@@ -267,17 +294,47 @@ caret::confusionMatrix(reference = as.factor(testProbs$obs),
 ```
 
 ```{r roc_curve, message = FALSE, warning = FALSE}
-
-ggplot(trainProbs, aes(d = obs, m = pred)) + 
+ggplot(testProbs, aes(d = obs, m = pred)) + 
   geom_roc(n.cuts = 50, labels = FALSE) + 
   style_roc(theme = theme_grey) +
   geom_abline(slope = 1, intercept = 0, size = 1.5, color = 'grey') +
   plotTheme()
 
-auc(trainProbs$obs, trainProbs$pred)
+auc(testProbs$obs, testProbs$pred)
 ```
 
+```{r fig.width=10,fig.height=10}
+test_cm_map_df <- cbind(test, testProbs) %>%
+  mutate(confusionMtx = case_when(predClass == 1 & obs == 1 ~ "True Positive",
+                                  predClass == 1 & obs == 0 ~ "False Positive",
+                                  predClass == 0 & obs == 0 ~ "True Negative",
+                                  predClass == 0 & obs == 1 ~ "False Negative"))
+
+cal_FullPredictions <- rbind(train_cm_map_df, test_cm_map_df)
+
+cal_FullPredictions %>%
+  ggplot() +
+    geom_sf(aes(fill = confusionMtx)) +
+    scale_fill_viridis(direction = -1, discrete = TRUE) +
+    labs(title = "Model training accuracy") +
+    mapTheme()
+
+
+cal_FullPredictions %>%
+  mutate(predClass = as.factor(predClass)) %>%
+  ggplot() +
+    geom_sf(aes(fill = predClass)) +
+    scale_fill_manual(values = c("dark green", "dark blue"),
+                      labels = c("No Inundation","Inundation"),
+                      name = "Predicted Inundation") +
+    labs(title = "Historic Flood Inundation in Calgary, Alberta, CA") +
+    mapTheme()
+```
+
+
+
 # Testing on a comparable city
+
 ### Pittsburgh data
 ```{r}
 pghBoundary <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/PittsburghData/producedData/PGHCityBoundary_expanded.shp')

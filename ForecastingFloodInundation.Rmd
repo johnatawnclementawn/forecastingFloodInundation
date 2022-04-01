@@ -14,13 +14,14 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
 	echo = TRUE,
-	error = TRUE,
+	error = FALSE,
 	message = FALSE,
 	warning = FALSE,
-	cache = TRUE
+	cache = FALSE,
+	tidy = TRUE
 )
 ```
-## Introduction & Motivation
+# Introduction & Motivation
 On average, flooding results in approximately 120 fatalities and about $5 billion in property damages across the United States on an annual basis [1][2]. It is advantageous, then, to be able to predict future flooding such that it may be mitigated. This is especially common in cities, which contain large areas of impermeable surfaces and concentrate human growth. Mitigation measures include:
 1. Replace impermeable surfaces
 1. Install water attenuation and infiltration devices
@@ -31,13 +32,16 @@ We will focus on the last of these items: **improving warning mechanisms**. To d
 
 ```{r libraries, message=FALSE, warning=FALSE}
 library(caret)
+library(ckanr)
 library(pscl)
 library(plotROC)
 library(pROC)
 library(sf)
+library(spdep)
 library(tidyverse)
 library(knitr)
 library(kableExtra)
+library(grid)
 library(gridExtra)
 library(tigris)
 library(viridis)
@@ -45,6 +49,9 @@ library(raster)
 ```
 
 ```{r mapTheme, echo=TRUE}
+
+source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r")
+
 mapTheme <- function() { 
             theme(plot.title =element_text(size=12),
                   plot.subtitle = element_text(size=8),
@@ -88,7 +95,7 @@ options(scipen = 999)
 ## Model Components: Data
 
 ### Calgary Data
-```{r}
+```{r message=FALSE, warning=FALSE}
 calgaryBoundary <- st_read('https://data.calgary.ca/resource/erra-cqp9.geojson') %>%
   st_transform(crs = 3776)
 ```
@@ -131,7 +138,7 @@ pghFish <- ggplot() +
 grid.arrange(calFish, pghFish, nrow = 1)
 ```
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 cal_PredictionFishnet <- st_read('D:/Users/Johnathan/Google Drive/Grad School/Penn_MUSA/Spring2022/675_LUaEModeling/Homework/3_ForecastingFloodInundation/CalgaryData/cal_toPredict.shp')
 
 # Clean up colnames:
@@ -149,7 +156,7 @@ cal_PredictionFishnet$uniqueID <- as.numeric(cal_PredictionFishnet$uniqueID)
 ```
 
 #### Dependent Variable Visualization
-```{r fig.width=10, fig.height=10}
+```{r fig.width=8, fig.height=8}
 cal_PredictionFishnet %>%
   mutate(inundation = as.factor(inundation)) %>%
   ggplot() +
@@ -162,44 +169,46 @@ cal_PredictionFishnet %>%
 
 
 #### Indpendent Variable Visualizations
-```{r fig.width=10, fig.height=10}
-# Average Distance to stream or river features as created from a DEM
-cal_PredictionFishnet %>%
-  ggplot() +
-    geom_sf(aes(fill = CellAvgDistStream)) +
-    scale_fill_viridis(direction = -1) +
-    labs(title = "Average Distance to Streams or Rivers") +
-    mapTheme()
-
-# Average Distance to steep slopes as created from a DEM
-# A steep slope is defined as a rise of 20% or more
-cal_PredictionFishnet %>%
-  ggplot() +
-    geom_sf(aes(fill = CellAvgDistSteepSlope)) +
-    scale_fill_viridis(direction = -1) +
-    labs(title = "Average Distance to Steep Slopes (>20% rise)") +
-    mapTheme()
-
-# Average Distance to wetlands as retrieved from open data sources:
-# Alberta / Calgary: https://geospatial.alberta.ca/titan/rest/services/environment/alberta_merged_wetland_inventory/MapServer/3
-# Allegheny County / Pittsburgh: https://www.pasda.psu.edu/download/alleghenycounty/AlleghenyCounty_NWI2000.zip
-cal_PredictionFishnet %>%
-  ggplot() +
-    geom_sf(aes(fill = CellAvgDistWetland)) +
-    scale_fill_viridis(direction = -1) +
-    labs(title = "Average Distance to Wetlands") +
-    mapTheme()
-
-# Summary of Impervious Surfaces
-# If a cell touches an impervious surface, it will be classified as having impervious surfaces
-# Land cover data: http://www.cec.org/north-american-environmental-atlas/land-cover-30m-2015-landsat-and-rapideye/
-cal_PredictionFishnet %>%
-  ggplot() +
-    geom_sf(aes(fill = CellSumImpSurf)) +
-    scale_fill_viridis(direction = -1) +
-    labs(title = "Summary of Impervious Surfaces") +
-    mapTheme()
-
+```{r fig.width=12, fig.height=12}
+grid.arrange(    
+    # Average Distance to stream or river features as created from a DEM
+    cal_PredictionFishnet %>%
+      ggplot() +
+        geom_sf(aes(fill = CellAvgDistStream)) +
+        scale_fill_viridis(direction = -1) +
+        labs(title = "Average Distance to Streams or Rivers") +
+        mapTheme()
+    ,
+    # Average Distance to steep slopes as created from a DEM
+    # A steep slope is defined as a rise of 20% or more
+    cal_PredictionFishnet %>%
+      ggplot() +
+        geom_sf(aes(fill = CellAvgDistSteepSlope)) +
+        scale_fill_viridis(direction = -1) +
+        labs(title = "Average Distance to Steep Slopes (>20% rise)") +
+        mapTheme()
+    ,
+    # Average Distance to wetlands as retrieved from open data sources:
+    # Alberta / Calgary: https://geospatial.alberta.ca/titan/rest/services/environment/alberta_merged_wetland_inventory/MapServer/3
+    # Allegheny County / Pittsburgh: https://www.pasda.psu.edu/download/alleghenycounty/AlleghenyCounty_NWI2000.zip
+    cal_PredictionFishnet %>%
+      ggplot() +
+        geom_sf(aes(fill = CellAvgDistWetland)) +
+        scale_fill_viridis(direction = -1) +
+        labs(title = "Average Distance to Wetlands") +
+        mapTheme()
+    ,
+    # Summary of Impervious Surfaces
+    # If a cell touches an impervious surface, it will be classified as having impervious surfaces
+    # Land cover data: http://www.cec.org/north-american-environmental-atlas/land-cover-30m-2015-landsat-and-rapideye/
+    cal_PredictionFishnet %>%
+      ggplot() +
+        geom_sf(aes(fill = CellSumImpSurf)) +
+        scale_fill_viridis(direction = -1) +
+        labs(title = "Summary of Impervious Surfaces") +
+        mapTheme()
+  , nrow=2, ncol=2
+  )
 ```
 
 ## Model Components: Build Model
@@ -225,7 +234,7 @@ summary(floodModel)
 ```{r}
 cal_Train_inundationProbs <- predict(floodModel, Train, type="response")
 
-hist(cal_Train_inundationProbs)
+# hist(cal_Train_inundationProbs)
 ```
 
 ```{r plot_preds}
@@ -262,7 +271,9 @@ auc(trainProbs$obs, trainProbs$pred)
 
 ```{r fig.width=10,fig.height=10}
 train_cm_map_df <- cbind(Train, trainProbs) %>%
-  mutate(confusionMtx = case_when(predClass == 1 & obs == 1 ~ "True Positive",
+  mutate(error = case_when(predClass == obs ~ 0,
+                           predClass != obs ~ 1),
+         confusionMtx = case_when(predClass == 1 & obs == 1 ~ "True Positive",
                                   predClass == 1 & obs == 0 ~ "False Positive",
                                   predClass == 0 & obs == 0 ~ "True Negative",
                                   predClass == 0 & obs == 1 ~ "False Negative"))
@@ -276,26 +287,25 @@ train_cm_map_df %>%
 
 ```
 
+## Model Cross-validation
 
 ```{r}
 cal_inundationProbs <- predict(floodModel, test, type="response")
 
-hist(cal_inundationProbs)
-```
+# hist(cal_inundationProbs)
 
-```{r test_plot_preds}
 testProbs <- data.frame(obs = as.numeric(test$inundation),
                         pred = cal_inundationProbs)
 
-ggplot(testProbs, aes(x = pred, fill=as.factor(obs))) + 
-  geom_density() +
-  facet_grid(obs ~ .) + 
-  xlab("Probability") + 
-  geom_vline(xintercept = .28) +
-  scale_fill_manual(values = c("dark green", "dark blue"),
-                      labels = c("No Inundation","Inundation"),
-                      name = "") +
-  plotTheme()
+# ggplot(testProbs, aes(x = pred, fill=as.factor(obs))) + 
+#   geom_density() +
+#   facet_grid(obs ~ .) + 
+#   xlab("Probability") + 
+#   geom_vline(xintercept = .28) +
+#   scale_fill_manual(values = c("dark green", "dark blue"),
+#                       labels = c("No Inundation","Inundation"),
+#                       name = "") +
+#   plotTheme()
 ```
 
 
@@ -320,7 +330,9 @@ auc(testProbs$obs, testProbs$pred)
 
 ```{r fig.width=10,fig.height=10}
 test_cm_map_df <- cbind(test, testProbs) %>%
-  mutate(confusionMtx = case_when(predClass == 1 & obs == 1 ~ "True Positive",
+  mutate(error = case_when(predClass == obs ~ 0,
+                           predClass != obs ~ 1),
+         confusionMtx = case_when(predClass == 1 & obs == 1 ~ "True Positive",
                                   predClass == 1 & obs == 0 ~ "False Positive",
                                   predClass == 0 & obs == 0 ~ "True Negative",
                                   predClass == 0 & obs == 1 ~ "False Negative"))
@@ -347,6 +359,19 @@ cal_FullPredictions %>%
 ```
 
 
+```{r eval=FALSE, include=FALSE}
+### Spatial Cross-validation
+coords.test <-  st_coordinates(st_centroid(test_cm_map_df)) 
+
+neighborList.test <- knn2nb(knearneigh(coords.test, 5))
+
+spatialWeights.test <- nb2listw(neighborList.test, style="W")
+ 
+test_cm_map_df %>% 
+  mutate(lagPriceError = lag.listw(spatialWeights.test, error)) %>%
+  ggplot(aes(lagPriceError, error))
+```
+
 
 # Testing on a comparable city
 
@@ -370,43 +395,46 @@ pgh_PredictionFishnet <- pgh_PredictionFishnet %>%
   dplyr::select(uniqueID, CellAvgDistStream, CellAvgDistSteepSlope, CellAvgDistWetland, CellSumImpSurf)
 ```
 
-```{r fig.width=10, fig.height=10}
-# Average Distance to stream or river features as created from a DEM
-pgh_PredictionFishnet %>%
-  ggplot() +
-    geom_sf(aes(fill = CellAvgDistStream)) +
-    scale_fill_viridis(direction = -1) +
-    labs(title = "Average Distance to Streams or Rivers") +
-    mapTheme()
-
-# Average Distance to steep slopes as created from a DEM
-# A steep slope is defined as a rise of 20% or more
-pgh_PredictionFishnet %>%
-  ggplot() +
-    geom_sf(aes(fill = CellAvgDistSteepSlope)) +
-    scale_fill_viridis(direction = -1) +
-    labs(title = "Average Distance to Steep Slopes (>20% rise)") +
-    mapTheme()
-
-# Average Distance to wetlands as retrieved from open data sources:
-# Alberta / Calgary: https://geospatial.alberta.ca/titan/rest/services/environment/alberta_merged_wetland_inventory/MapServer/3
-# Allegheny County / Pittsburgh: https://www.pasda.psu.edu/download/alleghenycounty/AlleghenyCounty_NWI2000.zip
-pgh_PredictionFishnet %>%
-  ggplot() +
-    geom_sf(aes(fill = CellAvgDistWetland)) +
-    scale_fill_viridis(direction = -1) +
-    labs(title = "Average Distance to Wetlands") +
-    mapTheme()
-
-# Summary of Impervious Surfaces
-# If a cell touches an impervious surface, it will be classified as having impervious surfaces
-# Land cover data: http://www.cec.org/north-american-environmental-atlas/land-cover-30m-2015-landsat-and-rapideye/
-pgh_PredictionFishnet %>%
-  ggplot() +
-    geom_sf(aes(fill = CellSumImpSurf)) +
-    scale_fill_viridis(direction = -1) +
-    labs(title = "Summary of Impervious Surfaces") +
-    mapTheme()
+```{r fig.width=12, fig.height=12}
+  grid.arrange( 
+    # Average Distance to stream or river features as created from a DEM
+    pgh_PredictionFishnet %>%
+      ggplot() +
+        geom_sf(aes(fill = CellAvgDistStream)) +
+        scale_fill_viridis(direction = -1) +
+        labs(title = "Average Distance to Streams or Rivers") +
+        mapTheme()
+    ,
+    # Average Distance to steep slopes as created from a DEM
+    # A steep slope is defined as a rise of 20% or more
+    pgh_PredictionFishnet %>%
+      ggplot() +
+        geom_sf(aes(fill = CellAvgDistSteepSlope)) +
+        scale_fill_viridis(direction = -1) +
+        labs(title = "Average Distance to Steep Slopes (>20% rise)") +
+        mapTheme()
+    ,
+    # Average Distance to wetlands as retrieved from open data sources:
+    # Alberta / Calgary: https://geospatial.alberta.ca/titan/rest/services/environment/alberta_merged_wetland_inventory/MapServer/3
+    # Allegheny County / Pittsburgh: https://www.pasda.psu.edu/download/alleghenycounty/AlleghenyCounty_NWI2000.zip
+    pgh_PredictionFishnet %>%
+      ggplot() +
+        geom_sf(aes(fill = CellAvgDistWetland)) +
+        scale_fill_viridis(direction = -1) +
+        labs(title = "Average Distance to Wetlands") +
+        mapTheme()
+    ,
+    # Summary of Impervious Surfaces
+    # If a cell touches an impervious surface, it will be classified as having impervious surfaces
+    # Land cover data: http://www.cec.org/north-american-environmental-atlas/land-cover-30m-2015-landsat-and-rapideye/
+    pgh_PredictionFishnet %>%
+      ggplot() +
+        geom_sf(aes(fill = CellSumImpSurf)) +
+        scale_fill_viridis(direction = -1) +
+        labs(title = "Summary of Impervious Surfaces") +
+        mapTheme()
+  , nrow=2, ncol=2
+  )
 
 ```
 
@@ -414,7 +442,7 @@ pgh_PredictionFishnet %>%
 ```{r}
 pgh_PredictionFishnet$inundationProbs <- predict(floodModel, pgh_PredictionFishnet, type="response")
 
-hist(pgh_PredictionFishnet$inundationProbs)
+# hist(pgh_PredictionFishnet$inundationProbs)
 
 pgh_PredictionFishnet <- pgh_PredictionFishnet %>%
   mutate(predClass = ifelse(inundationProbs > .28 ,1,0))
@@ -429,7 +457,7 @@ pgh_PredictionFishnet %>%
     scale_fill_manual(values = c("dark green", "dark blue"),
                       labels = c("No Inundation","Inundation"),
                       name = "Predicted Inundation") +
-    labs(title = "Predicted Flood Inundation Regions in Calgary, Alberta, CA") +
+    labs(title = "Predicted Flood Inundation Regions in Pittsburgh, PA, USA") +
     mapTheme()
 ```
 

@@ -357,19 +357,21 @@ cal_FullPredictions %>%
     labs(title = "Predicted Flood Inundation Regions in Calgary, Alberta, CA") +
     mapTheme()
 ```
-
-
-```{r eval=FALSE, include=FALSE}
 ### Spatial Cross-validation
-coords.test <-  st_coordinates(st_centroid(test_cm_map_df)) 
 
-neighborList.test <- knn2nb(knearneigh(coords.test, 5))
+```{r}
 
-spatialWeights.test <- nb2listw(neighborList.test, style="W")
+coords.test <-  st_coordinates(st_centroid(train_cm_map_df)) 
+
+neighborList.test <- nb2listw(knn2nb(knearneigh(coords.test, 5)))
+
+# spatialWeights.test <- nb2listw(neighborList.test, style="W")
+
+moran.test(residuals.glm(floodModel), neighborList.test)
  
-test_cm_map_df %>% 
-  mutate(lagPriceError = lag.listw(spatialWeights.test, error)) %>%
-  ggplot(aes(lagPriceError, error))
+# test_cm_map_df %>% 
+#   mutate(lagPriceError = lag.listw(spatialWeights.test, error)) %>%
+#   ggplot(aes(lagPriceError, error))
 ```
 
 

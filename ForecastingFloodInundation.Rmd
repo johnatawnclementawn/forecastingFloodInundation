@@ -359,7 +359,7 @@ cal_FullPredictions %>%
 ```
 ### Spatial Cross-validation
 
-```{r eval=FALSE, include=FALSE}
+```{r}
 
 coords.test <-  st_coordinates(st_centroid(train_cm_map_df)) 
 

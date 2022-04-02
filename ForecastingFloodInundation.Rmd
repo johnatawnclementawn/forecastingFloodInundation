@@ -22,12 +22,13 @@ knitr::opts_chunk$set(
 )
 ```
 # Introduction & Motivation
-On average, flooding results in approximately 120 fatalities and about $5 billion in property damages across the United States on an annual basis [1][2]. It is advantageous, then, to be able to predict future flooding such that it may be mitigated. This is especially common in cities, which contain large areas of impermeable surfaces and concentrate human growth. Mitigation measures include:
-1. Replace impermeable surfaces
-1. Install water attenuation and infiltration devices
-1. Improve storm water and waste water management systems
-1. **Improve warning mechanisms**
-We will focus on the last of these items: **improving warning mechanisms**. To do this, we have built a machine learning model which uses terrain, distance to existing water, and to predict prior flooding in Calgary, CA. We evaluated the effectiveness of the model by testing it on data held out from the model building process. Finally, we used the model to predict flooding in Pittsburgh, PA, USA.
+On average, flooding results in approximately 120 fatalities and about $5 billion in property damages across the United States on an annual basis [1][2]. It is advantageous, then, to be able to predict future flooding such that it may be mitigated. This is especially common in cities, which contain large areas of impermeable surfaces and concentrate human growth. Mitigation measures include:    
+1. Replace impermeable surfaces    
+2. Install water attenuation and infiltration devices     
+3. Improve storm water and waste water management systems     
+4. Improve warning mechanisms     
+5. **Predict where flooding will occur to focus these mitigation measures**     
+We will focus on the last of these items: **Predicting where flooding will occur**. To do this, we have built a machine learning model which uses terrain, distance to existing water, and to predict prior flooding in Calgary, CA. We evaluated the effectiveness of the model by testing it on data held out from the model building process. Finally, we used the model to predict flooding in Pittsburgh, PA, USA.
 
 
 ```{r libraries, message=FALSE, warning=FALSE}
@@ -169,6 +170,16 @@ cal_PredictionFishnet %>%
 
 
 #### Indpendent Variable Visualizations
+
+Located at the confluence of the Bow and Elbow Rivers, Calgary experiences chronic fluvial (riverine) flooding. Heavy rains, combined with melting snowpack, during the summer months cause increased flow. Distance to rivers and streams is thus used as a variable.    
+
+Slopes impact the movement of water throughout the city, with water moving faster in areas with steep slopes. The distance of a place to steep slopes can have significant influence on its likelihood of flooding.    
+
+Wetlands are ecosystems that are permanently or seasonally flooded by water. The distance of a place to existing wetlands can then be of significance when modeling flood risk.    
+
+Impervious cover, typically in the form of concrete and asphalt, inhibits rainwater from infiltrating into the soil. Areas with more impervious cover may have higher likelihood of flooding.    
+
+
 ```{r fig.width=12, fig.height=12}
 grid.arrange(    
     # Average Distance to stream or river features as created from a DEM
@@ -213,6 +224,12 @@ grid.arrange(
 
 ## Model Components: Build Model
 
+In this section, we construct a predictive model which returns a probability that a certain area will be inundated by flood waters. To do this, we first break the data into two parts so that we can build the model using one part and then mimic how the model would perform on unseen data by testing it on the second part.    
+The important take-aways from the output below are:    
+1. **The average distance to a waterbody is a good predictor of flooding**   
+2. **The average distance to steep slopes is a good predictor of flooding**    
+3. **The amount of impervious surfaces near an area is a good predictor of flooding**   
+1. **The average distance to a wetland is NOT a good predictor of flooding, when combined with the other features listed above**    
 ```{r}
 set.seed(4326)
 trainIdx <- createDataPartition(cal_PredictionFishnet$CellAvgDistSteepSlope, p=.7,
@@ -220,9 +237,7 @@ trainIdx <- createDataPartition(cal_PredictionFishnet$CellAvgDistSteepSlope, p=.
                                 times=1)
 Train <- cal_PredictionFishnet[trainIdx,]
 test <- cal_PredictionFishnet[-trainIdx,]
-```
 
-```{r}
 floodModel <- glm(inundation ~ ., 
                   family="binomial"(link="logit"),
                   data = Train %>% dplyr::select(-uniqueID) %>%
@@ -231,13 +246,20 @@ floodModel <- glm(inundation ~ .,
 summary(floodModel)
 ```
 
+### Assessing Model Performance
+
+It is helpful to identify the ratio of correct to incorrect predictions made so adjustments to the model can be made. To visualize this, we use a confusion matrix. Don't get confused by the jargon, a confusion matrix is just a table where each row represents predicted outcomes, each column represents the actual outcomes, and the intersection of rows and columns is number of times the predicted value and actual value pair occur. There are specific terms for these pairings:    
+- **True-positive**: We predicted flooding will occur and it did    
+- **True-negative**: We predicted flooding will not occur and it did not    
+- **False-positive**: We predicted flooding will occur and it did not    
+- **False-negative**: We predicted flooding will not occur and it did     
+
 ```{r}
+# Using the trained model, predict on train data for first round of model evaluation
 cal_Train_inundationProbs <- predict(floodModel, Train, type="response")
 
 # hist(cal_Train_inundationProbs)
-```
 
-```{r plot_preds}
 trainProbs <- data.frame(obs = as.numeric(Train$inundation),
                         pred = cal_Train_inundationProbs)
 
@@ -257,7 +279,7 @@ caret::confusionMatrix(reference = as.factor(trainProbs$obs),
                        data = as.factor(trainProbs$predClass), 
                        positive = "1")
 ```
-
+The plot below is called an ROC curve (Receiver Operating Characteristic curve). The curve shows the trade-off for optimizing for optimizing for **true positive** or **true negative** values over each other. The straight line from 0x0 to 1x1 indicates a coin-toss scenario, and an ROC curve that extends above that line, much like the curve displayed below, indicates that a model is useful. However, if the curve is almost at a right angle (extending vertically from 0x0 to 0x1 and then to 1x1), the model is matching the data too well and will likely be unable to perform when given outside data.   
 ```{r roc_curve, message = FALSE, warning = FALSE}
 ggplot(trainProbs, aes(d = obs, m = pred)) + 
   geom_roc(n.cuts = 50, labels = FALSE) + 
@@ -267,7 +289,7 @@ ggplot(trainProbs, aes(d = obs, m = pred)) +
 
 auc(trainProbs$obs, trainProbs$pred)
 ```
-
+We can also expand the confusion matrix out spatially by mapping where our true positive, true negative, false positive, and false negative values are in space.
 
 ```{r fig.width=10,fig.height=10}
 train_cm_map_df <- cbind(Train, trainProbs) %>%
@@ -288,6 +310,7 @@ train_cm_map_df %>%
 ```
 
 ## Model Cross-validation
+In the code chunks below, we repeat the cross-validation steps we ran on the training set with the testing set. These data have not been seen by the model yet, and should give us an indication of how well the model will perform on outside data similar to those in the Calgary dataset.
 
 ```{r}
 cal_inundationProbs <- predict(floodModel, test, type="response")
@@ -358,7 +381,7 @@ cal_FullPredictions %>%
     mapTheme()
 ```
 ### Spatial Cross-validation
-
+We can also examine whether there is spatial-clustering present in the mistakes that the model is making. If there is clustering, we can hypothesize that there are some spatial processes that the model is unable to account for and that we made need to account for in future model building.   
 ```{r}
 
 coords.test <-  st_coordinates(st_centroid(train_cm_map_df)) 
